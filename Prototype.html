@@ -1,6 +1,13 @@
 <!DOCTYPE html>
 <html lang="ru">
-<head>
+<head> <script>
+var GL = {r:255, g:255, b:0, redEye:'left'};
+try { var o = JSON.parse(localStorage.getItem('eyeGlasses')); if (o) for (var k in o) GL[k] = o[k]; } catch(e) {}
+var RED = 'rgb(' + GL.r + ',0,0)';
+var GREEN = 'rgb(0,' + GL.g + ',' + GL.b + ')';
+document.documentElement.style.setProperty('--red', RED);
+document.documentElement.style.setProperty('--green', GREEN);
+</script>
 <meta charset="UTF-8">
 <title>Прототип: сцены 0–15</title>
 <style>
