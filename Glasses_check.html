@@ -6,52 +6,178 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <title>Проверка очков</title>
 <style>
-  *{box-sizing:border-box}
-  html,body{margin:0;background:#000;color:#e8e8e8;font-family:-apple-system,system-ui,"Segoe UI",Arial,sans-serif}
-  body{display:flex;flex-direction:column;min-height:100vh;min-height:100dvh}
-  #stage{position:sticky;top:0;z-index:1;height:42vh;min-height:220px;background:#000;
-         display:flex;align-items:center;justify-content:center}
-  #stage svg{width:96%;height:auto;max-height:100%;display:block}
-  #panel{background:#22252b;padding:14px;padding-bottom:calc(20px + env(safe-area-inset-bottom));flex:1}
-  .top{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px}
-  .top b{font-size:17px}
-  #prog{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:14px}
-  #prog i{height:6px;border-radius:3px;background:#3a3e47}
-  #prog i.on{background:#6aa9ff}
-  h2{font-size:20px;margin:6px 0}
-  p{margin:6px 0 12px;line-height:1.4}
-  button{display:block;width:100%;font:inherit;font-size:17px;text-align:left;padding:13px 16px;margin:8px 0;
-         border-radius:10px;border:1px solid #444a55;background:#2e323b;color:#fff;-webkit-tap-highlight-color:transparent}
-  button:active{background:#454b58}
-  button.primary{background:#2f6fd6;border-color:#2f6fd6;text-align:center}
-  button.small{width:auto;display:inline-block;font-size:14px;padding:8px 12px;margin:0}
-  .note{background:#3a2f1a;border:1px solid #6b5420;padding:10px;border-radius:8px;font-size:15px}
-  details{margin-top:14px;border:1px solid #3a3e47;border-radius:8px;padding:8px 10px}
-  summary{color:#9aa0ab;font-size:14px}
-  label{display:flex;justify-content:space-between;margin-top:12px;font-size:15px}
-  input[type=range]{width:100%;height:34px}
-  .hint{color:#8a909b;font-size:13px}
-  @media (orientation:landscape){
-    body{flex-direction:row;height:100vh;height:100dvh}
-    #stage{position:static;flex:1;height:auto;min-height:0}
-    #panel{flex:0 0 340px;overflow-y:auto}
-  }
+*{box-sizing:border-box}
+html,body{margin:0;background:#000;color:#e8e8e8;font-family:-apple-system,system-ui,Arial,sans-serif}
+body{display:flex;flex-direction:column;min-height:100vh;min-height:100dvh}
+#stage{position:sticky;top:0;z-index:1;height:40vh;min-height:200px;background:#000;display:flex;align-items:center;justify-content:center}
+#stage svg{width:96%;height:100%;display:block}
+#panel{background:#22252b;padding:14px;padding-bottom:calc(24px + env(safe-area-inset-bottom));flex:1}
+#prog{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:6px 0 14px}
+#prog i{height:6px;border-radius:3px;background:#3a3e47}
+#prog i.on{background:#6aa9ff}
+h1{font-size:18px;margin:0}
+h2{font-size:20px;margin:6px 0}
+p{margin:6px 0 12px;line-height:1.4}
+button{display:block;width:100%;font:inherit;font-size:17px;text-align:left;padding:13px 16px;margin:8px 0;border-radius:10px;border:1px solid #444a55;background:#2e323b;color:#fff;-webkit-tap-highlight-color:transparent}
+button:active{background:#454b58}
+button.ok{background:#1f6b3a;border-color:#1f6b3a}
+button.small{width:auto;display:inline-block;font-size:14px;padding:8px 12px}
+.note{background:#3a2f1a;border:1px solid #6b5420;padding:10px;border-radius:8px;font-size:15px;margin:10px 0}
+details{margin-top:16px;border:1px solid #3a3e47;border-radius:8px;padding:8px 10px}
+summary{color:#9aa0ab;font-size:14px}
+label{display:flex;justify-content:space-between;margin-top:12px;font-size:15px}
+input[type=range]{width:100%;height:34px}
+.hint{color:#8a909b;font-size:13px}
+@media (orientation:landscape){
+ body{flex-direction:row;height:100vh;height:100dvh}
+ #stage{position:static;flex:1;height:auto;min-height:0}
+ #panel{flex:0 0 340px;overflow-y:auto}
+}
 </style>
 </head>
 <body>
 
 <div id="stage">
+ 
   
-    
-    
   
+ 
 </div>
 
 <div id="panel">
-  <div class="top">
-    <b>Проверка красно-зелёных очков</b>
-    <button id="fs" class="small">⛶ Полный экран</button>
-  </div>
-  <div id="prog"><i></i><i></i><i></i><i></i></div>
-  <div id="content"></div>
-  <p
+ <h1>Проверка красно-зелёных очков</h1>
+ <div id="prog"><i></i><i></i><i></i><i></i></div>
+ <div id="content"></div>
+ <details>
+  <summary>Ручная настройка (для специалиста)</summary>
+  <label>Красный — звезда <span id="rv"></span></label>
+  <input type="range" id="r" min="0" max="255">
+  <label>Зелёный — круг <span id="gv"></span></label>
+  <input type="range" id="g" min="0" max="255">
+  <label>Синий в круге <span id="bv"></span></label>
+  <input type="range" id="b" min="0" max="255">
+  <p class="hint">Звезда должна быть видна только через красную линзу, круг — только через зелёную.</p>
+  <button id="reset" class="small">Сбросить цвета</button>
+ </details>
+</div>
+
+<script>
+var KEY = 'eyeGlasses';
+var DEF = {r:255, g:255, b:0, redEye:'left'};
+var s = JSON.parse(JSON.stringify(DEF));
+try { var o = JSON.parse(localStorage.getItem(KEY)); if (o) for (var k in o) s[k] = o[k]; } catch(e) {}
+var step = 0, msg = '';
+var EYE = {left:'левый', right:'правый'};
+function other(e){ return e === 'left' ? 'right' : 'left'; }
+function clamp(v){ return Math.max(0, Math.min(255, Math.round(v))); }
+function $(id){ return document.getElementById(id); }
+
+function starPts(cx, cy, R, r){
+ var p = [];
+ for (var i = 0; i < 10; i++){
+  var a = -Math.PI/2 + i*Math.PI/5, d = i % 2 ? r : R;
+  p.push((cx + d*Math.cos(a)).toFixed(1) + ',' + (cy + d*Math.sin(a)).toFixed(1));
+ }
+ return p.join(' ');
+}
+$('star').setAttribute('points', starPts(55, 50, 38, 16));
+
+function paint(){
+ $('star').setAttribute('fill', 'rgb(' + s.r + ',0,0)');
+ $('circ').setAttribute('fill', 'rgb(0,' + s.g + ',' + s.b + ')');
+ $('r').value = s.r; $('g').value = s.g; $('b').value = s.b;
+ $('rv').textContent = s.r; $('gv').textContent = s.g; $('bv').textContent = s.b;
+}
+function save(){ try { localStorage.setItem(KEY, JSON.stringify(s)); } catch(e) {} }
+function btn(act, text, cls){ return '<button data-act="' + act + '"' + (cls ? ' class="' + cls + '"' : '') + '>' + text + '</button>'; }
+
+function view(){
+ var bars = $('prog').children;
+ for (var i = 0; i < 4; i++) bars[i].className = i <= step ? 'on' : '';
+ var red = EYE[s.redEye], green = EYE[other(s.redEye)];
+ var h = '';
+ if (step === 0){
+  h = '<h2>Шаг 1. Подготовка</h2>' +
+   '<p>Яркость экрана — на максимум. True Tone и Night Shift — выключить. Наденьте красно-зелёные очки.</p>' +
+   '<p><b>На каком глазу красная линза?</b></p>' +
+   btn('redL', 'Красная — на <b>левом</b> глазу') +
+   btn('redR', 'Красная — на <b>правом</b> глазу');
+ } else if (step === 1){
+  h = '<h2>Шаг 2. Глаз с красной линзой</h2>' +
+   '<p>Закройте ладонью <b>' + green + '</b> глаз. Смотрите только <b>' + red + '</b> (через красную линзу). Что видно?</p>' +
+   btn('s1ok', '✓ Только звезду', 'ok') +
+   btn('s1leak', 'Звезду и бледный круг') +
+   btn('s1dim', 'Звезда тусклая или не видна');
+ } else if (step === 2){
+  h = '<h2>Шаг 3. Глаз с зелёной линзой</h2>' +
+   '<p>Теперь закройте <b>' + red + '</b> глаз. Смотрите только <b>' + green + '</b> (через зелёную линзу). Что видно?</p>' +
+   btn('s2ok', '✓ Только круг', 'ok') +
+   btn('s2leak', 'Круг и бледную звезду') +
+   btn('s2dim', 'Круг тусклый или не виден') +
+   btn('back', '← Назад к шагу 2');
+ } else if (step === 3){
+  h = '<h2>Шаг 4. Обоими глазами</h2>' +
+   '<p>Откройте оба глаза. Видны ли звезда и круг одновременно?</p>' +
+   btn('both', '✓ Да, видны обе фигуры — сохранить', 'ok') +
+   btn('one', 'Видна только одна или они «мигают»');
+ } else {
+  h = '<h2>Готово ✓</h2>' +
+   '<p>Настройки сохранены на этом устройстве.</p>' +
+   '<p class="hint">Звезда: rgb(' + s.r + ',0,0)<br>Круг: rgb(0,' + s.g + ',' + s.b + ')<br>Красная линза: ' + red + ' глаз</p>' +
+   btn('again', 'Пройти проверку заново');
+ }
+ if (msg) h = '<div class="note">' + msg + '</div>' + h;
+ $('content').innerHTML = h;
+ paint();
+}
+
+function act(a){
+ msg = '';
+ if (a === 'redL'){ s.redEye = 'left'; step = 1; }
+ else if (a === 'redR'){ s.redEye = 'right'; step = 1; }
+ else if (a === 's1ok'){ step = 2; }
+ else if (a === 's1leak'){
+  s.g = clamp(s.g * 0.85);
+  msg = 'Круг сделан тусклее. Посмотрите ещё раз.';
+  if (s.g < 70) msg += ' Круг уже очень тусклый — возможно, очки плохо разделяют цвета.';
+ }
+ else if (a === 's1dim'){
+  if (s.r >= 255) msg = 'Звезда уже на максимуме. Проверьте яркость экрана и что красная линза на нужном глазу.';
+  else { s.r = clamp(s.r * 1.15 + 5); msg = 'Звезда сделана ярче. Посмотрите ещё раз.'; }
+ }
+ else if (a === 's2ok'){ step = 3; }
+ else if (a === 's2leak'){
+  s.r = clamp(s.r * 0.85);
+  msg = 'Звезда сделана тусклее. Посмотрите ещё раз.';
+  if (s.r < 70) msg += ' Звезда уже очень тусклая — возможно, очки плохо разделяют цвета.';
+ }
+ else if (a === 's2dim'){
+  if (s.g < 255){ s.g = clamp(s.g * 1.15 + 5); msg = 'Круг сделан ярче. Посмотрите ещё раз.'; }
+  else if (s.b < 160){ s.b = clamp(s.b + 40); msg = 'В круг добавлен оттенок бирюзы — так он лучше проходит через зелёную линзу.'; }
+  else msg = 'Круг уже на максимуме. Проверьте яркость экрана.';
+ }
+ else if (a === 'back'){ step = 1; }
+ else if (a === 'both'){ save(); step = 4; }
+ else if (a === 'one'){
+  msg = 'Если при двух открытых глазах видна только одна фигура, это может быть подавление одного глаза. Очки при этом настроены правильно. Сообщите об этом врачу.';
+  save(); step = 4;
+ }
+ else if (a === 'again'){ step = 0; }
+ view();
+}
+
+$('content').addEventListener('click', function(e){
+ var b = e.target.closest('button');
+ if (b && b.dataset.act) act(b.dataset.act);
+});
+['r','g','b'].forEach(function(k){
+ $(k).addEventListener('input', function(){ s[k] = +this.value; paint(); save(); });
+});
+$('reset').addEventListener('click', function(){
+ s.r = DEF.r; s.g = DEF.g; s.b = DEF.b; save(); paint();
+});
+
+view();
+</script>
+</body>
+</html>
