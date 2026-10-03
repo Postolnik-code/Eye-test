@@ -114,7 +114,7 @@ function view(){
    btn('both', '✓ Да, видны обе — сохранить', 'ok') + btn('one', 'Видна только одна или «мигают»');
  } else {
   h = '<h2>Готово ✓</h2><p>Настройки сохранены на этом устройстве.</p><p class="hint">Звезда: rgb(' + s.r + ',0,0)<br>Круг: rgb(0,' + s.g + ',' + s.b + ')<br>Красная линза: ' + red + ' глаз</p>' +
-   btn('again', 'Пройти заново') + '<a href="index.html" style="display:block;text-align:center;padding:13px;margin:8px 0;border-radius:10px;background:#2f6fd6;color:#fff;text-decoration:none;font-size:17px">Перейти к скринингу →</a>';
+   btn('again', 'Пройти заново') + '<a href="Prototype.html" style="display:block;text-align:center;padding:13px;margin:8px 0;border-radius:10px;background:#2f6fd6;color:#fff;text-decoration:none;font-size:17px">Перейти к скринингу →</a>';
  }
  if (msg) h = '<div class="note">' + msg + '</div>' + h;
  el('content').innerHTML = h;
