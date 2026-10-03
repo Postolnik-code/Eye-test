@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Прототип: сцены 0–15</title>
+<style>
+  * { box-sizing:border-box; }
+  body { margin:0; height:100vh; display:grid; grid-template-columns:1fr 320px; overflow:hidden;
+         font-family:system-ui,"Segoe UI",Arial,sans-serif; background:#000; color:#e8e8e8; }
+  #stage { position:relative; overflow:hidden; background:radial-gradient(ellipse at center,#131c3a,#02030a); }
+  #stage.dark { background:#000; }
+  .obj { position:absolute; top:50%; transform:translate(-50%,-50%); font-size:16vmin; line-height:1;
+         user-select:none; transition:filter 2s; }
+  .pulse { animation:p .8s infinite alternate; }
+  @keyframes p { to { transform:translate(-50%,-50%) scale(1.15); } }
+  .gray { filter:grayscale(1); }
+  canvas.rds { position:absolute; top:50%; transform:translate(-50%,-50%); }
+  #msg { position:absolute; left:0; right:0; bottom:7%; text-align:center; font-size:22px; padding:0 20px; }
+  #panel { background:#22252b; padding:14px; overflow:auto; display:flex; flex-direction:column; gap:10px; font-size:14px; }
+  #panel h1 { font-size:16px; margin:0; }
+  #status { font-size:18px; font-weight:600; color:#6aa9ff; }
+  button { font:inherit; padding:9px 12px; border-radius:8px; border:1px solid #444a55; background:#2e323b; color:#fff; cursor:pointer; }
+  button:hover { background:#3a3f4a; }
+  button.big { margin-top:14px; font-size:20px; padding:12px 28px; background:#2f6fd6; border-color:#2f6fd6; }
+  .rowb { display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px; }
+  label { display:flex; justify-content:space-between; align-items:center; gap:8px; margin:4px 0; }
+  input[type=number] { width:80px; padding:4px; background:#15171b; color:#fff; border:1px solid #444a55; border-radius:6px; }
+  fieldset { border:1px solid #3a3e47; border-radius:8px; padding:8px 10px; margin:0; }
+  legend { color:#9aa0ab; font-size:12px; padding:0 6px; }
+  pre { background:#15171b; padding:8px; border-radius:8px; font-size:11px; margin:0; white-space:pre-wrap; max-height:220px; overflow:auto; }
+  .hint { color:#8a909b; font-size:12px; margin:0; }
+</style>
+</head>
+<body>
+
+<section id="stage"></section>
+
+<aside id="panel">
+  <h1>Панель специалиста</h1>
+  <div id="status"></div>
+  <div class="rowb">
+    <button id="back">◀ Назад</button>
+    <button id="rep">↻ Повтор</button>
+    <button id="skip">Далее ▶</button>
+  </div>
+  <fieldset>
+    <legend>Параметры проб</legend>
+    <label>Gap, мс <input type="number" data-k="gap_ms"></label>
+    <label>Стимул до, мс <input type="number" data-k="stimulus_max_ms"></label>
+    <label>Окно dwell, мс <input type="number" data-k="dwell_window_ms"></label>
+    <label>Радиус центра, px <input type="number" data-k="roi_center_radius_px"></label>
+  </fieldset>
+  <fieldset>
+    <legend>Очки</legend>
+    <div id="ginfo"></div>
+    <label><span>Поменять глаза местами</span><input type="checkbox" id="swap"></label>
+  </fieldset>
+  <button id="fs">⛶ Сцена на весь экран</button>
+  <button id="dl">Скачать JSON-лог</button>
+  <p class="hint">Курсор мыши имитирует взгляд. Клавиши: ← назад, R повтор, → далее.</p>
+  <pre id="last">—</pre>
+</aside>
+
+<script>
+const $ = s => document.querySelector(s);
+const stage = $('#stage');
+
+/* ---------- настройки ---------
