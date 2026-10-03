@@ -11,147 +11,117 @@ window.onerror = function(m, u, l){
  d.textContent = 'Ошибка: ' + m + ' (строка ' + l + ')';
  (document.body || document.documentElement).appendChild(d);
 };
-</script>
-<style>
-*{box-sizing:border-box}
-html,body{margin:0;background:#000;color:#e8e8e8;font-family:-apple-system,system-ui,Arial,sans-serif}
-body{display:flex;flex-direction:column;min-height:100vh}
-#stage{height:40vh;min-height:200px;background:#000;display:flex;align-items:center;justify-content:space-evenly}
-#star,#circ{width:36vmin;height:36vmin;max-width:240px;max-height:240px}
-#star{background:rgb(255,0,0);
- -webkit-clip-path:polygon(50% 0%,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%);
- clip-path:polygon(50% 0%,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%)}
-#circ{background:rgb(0,255,0);border-radius:50%}
-#panel{background:#22252b;padding:14px 14px 30px;flex:1}
-#prog{display:flex;gap:6px;margin:6px 0 14px}
-#prog i{flex:1;height:6px;border-radius:3px;background:#3a3e47}
-#prog i.on{background:#6aa9ff}
-h1{font-size:18px;margin:0}
-h2{font-size:20px;margin:6px 0}
-p{margin:6px 0 12px;line-height:1.4}
-button{display:block;width:100%;font-size:17px;text-align:left;padding:13px 16px;margin:8px 0;border-radius:10px;border:1px solid #444a55;background:#2e323b;color:#fff}
-button.ok{background:#1f6b3a;border-color:#1f6b3a}
-button.small{width:auto;display:inline-block;font-size:14px;padding:8px 12px}
-.note{background:#3a2f1a;border:1px solid #6b5420;padding:10px;border-radius:8px;font-size:15px;margin:10px 0}
-details{margin-top:16px;border:1px solid #3a3e47;border-radius:8px;padding:8px 10px}
-summary{color:#9aa0ab;font-size:14px}
-label{display:flex;justify-content:space-between;margin-top:12px;font-size:15px}
-input[type=range]{width:100%}
-.hint{color:#8a909b;font-size:13px}
-@media (orientation:landscape){
- body{flex-direction:row;height:100vh}
- #stage{flex:1;height:auto;min-height:0}
- #panel{flex:0 0 340px;overflow-y:auto}
-}
-</style>
-</head>
-<body>
-
-<div id="stage">
- <div id="star"></div>
- <div id="circ"></div>
-</div>
-
-<div id="panel">
- <h1>Проверка красно-зелёных очков</h1>
- <div id="prog"><i class="on"></i><i></i><i></i><i></i></div>
- <div id="content"></div>
- <details>
-  <summary>Ручная настройка (для специалиста)</summary>
-  <label>Красный — звезда <span id="rv">255</span></label>
-  <input type="range" id="r" min="0" max="255" value="255">
-  <label>Зелёный — круг <span id="gv">255</span></label>
-  <input type="range" id="g" min="0" max="255" value="255">
-  <label>Синий в круге <span id="bv">0</span></label>
-  <input type="range" id="b" min="0" max="255" value="0">
-  <button id="reset" class="small">Сбросить цвета</button>
- </details>
-</div>
-
 <script>
-var KEY = 'eyeGlasses';
-var s = {r:255, g:255, b:0, redEye:'left'};
-try { var o = JSON.parse(localStorage.getItem(KEY)); if (o) for (var k in o) s[k] = o[k]; } catch(e) {}
-var step = 0, msg = '';
-var EYE = {left:'левый', right:'правый'};
-function el(id){ return document.getElementById(id); }
-function clamp(v){ return Math.max(0, Math.min(255, Math.round(v))); }
-function save(){ try { localStorage.setItem(KEY, JSON.stringify(s)); } catch(e) {} }
-function btn(a, t, c){ return '<button data-act="' + a + '"' + (c ? ' class="' + c + '"' : '') + '>' + t + '</button>'; }
+const $ = s => document.querySelector(s);
+const stage = $('#stage');
 
-function ensureFigures(){
- var st = el('stage');
- if (!st){ st = document.createElement('div'); st.id = 'stage'; document.body.insertBefore(st, document.body.firstChild); }
- if (!el('star')){ var a = document.createElement('div'); a.id = 'star'; st.appendChild(a); }
- if (!el('circ')){ var c = document.createElement('div'); c.id = 'circ'; st.appendChild(c); }
-}
-ensureFigures();
-
-function paint(){
- el('star').style.background = 'rgb(' + s.r + ',0,0)';
- el('circ').style.background = 'rgb(0,' + s.g + ',' + s.b + ')';
- el('r').value = s.r; el('g').value = s.g; el('b').value = s.b;
- el('rv').textContent = s.r; el('gv').textContent = s.g; el('bv').textContent = s.b;
-}
-
-function view(){
- var bars = el('prog').children;
- for (var i = 0; i < 4; i++) bars[i].className = i <= step ? 'on' : '';
- var red = EYE[s.redEye];
- var green = EYE[s.redEye === 'left' ? 'right' : 'left'];
- var h = '';
- if (step === 0){
-  h = '<h2>Шаг 1. Подготовка</h2><p>Яркость — на максимум. True Tone и Night Shift — выключить. Наденьте очки.</p><p><b>На каком глазу красная линза?</b></p>' +
-   btn('redL', 'Красная — на левом глазу') + btn('redR', 'Красная — на правом глазу');
- } else if (step === 1){
-  h = '<h2>Шаг 2. Красная линза</h2><p>Закройте ладонью <b>' + green + '</b> глаз. Смотрите <b>' + red + '</b>. Что видно?</p>' +
-   btn('s1ok', '✓ Только звезду', 'ok') + btn('s1leak', 'Звезду и бледный круг') + btn('s1dim', 'Звезда тусклая или не видна') + btn('back0', '← Назад');
- } else if (step === 2){
-  h = '<h2>Шаг 3. Зелёная линза</h2><p>Закройте <b>' + red + '</b> глаз. Смотрите <b>' + green + '</b>. Что видно?</p>' +
-   btn('s2ok', '✓ Только круг', 'ok') + btn('s2leak', 'Круг и бледную звезду') + btn('s2dim', 'Круг тусклый или не виден') + btn('back1', '← Назад');
- } else if (step === 3){
-  h = '<h2>Шаг 4. Оба глаза</h2><p>Откройте оба глаза. Видны звезда и круг одновременно?</p>' +
-   btn('both', '✓ Да, видны обе — сохранить', 'ok') + btn('one', 'Видна только одна или «мигают»');
- } else {
-  h = '<h2>Готово ✓</h2><p>Настройки сохранены на этом устройстве.</p><p class="hint">Звезда: rgb(' + s.r + ',0,0)<br>Круг: rgb(0,' + s.g + ',' + s.b + ')<br>Красная линза: ' + red + ' глаз</p>' +
-   btn('again', 'Пройти заново') + '<a href="Prototype.html" style="display:block;text-align:center;padding:13px;margin:8px 0;border-radius:10px;background:#2f6fd6;color:#fff;text-decoration:none;font-size:17px">Перейти к скринингу →</a>';
- }
- if (msg) h = '<div class="note">' + msg + '</div>' + h;
- el('content').innerHTML = h;
- paint();
-}
-
-function act(a){
- msg = '';
- if (a === 'redL'){ s.redEye = 'left'; step = 1; }
- else if (a === 'redR'){ s.redEye = 'right'; step = 1; }
- else if (a === 's1ok'){ step = 2; }
- else if (a === 's1leak'){ s.g = clamp(s.g * 0.85); msg = 'Круг сделан тусклее. Посмотрите ещё раз.'; }
- else if (a === 's1dim'){ s.r = clamp(s.r * 1.15 + 5); msg = 'Звезда сделана ярче. Посмотрите ещё раз.'; }
- else if (a === 's2ok'){ step = 3; }
- else if (a === 's2leak'){ s.r = clamp(s.r * 0.85); msg = 'Звезда сделана тусклее. Посмотрите ещё раз.'; }
- else if (a === 's2dim'){
-  if (s.g < 255){ s.g = clamp(s.g * 1.15 + 5); msg = 'Круг сделан ярче.'; }
-  else { s.b = clamp(s.b + 40); msg = 'В круг добавлен бирюзовый оттенок.'; }
- }
- else if (a === 'back0'){ step = 0; }
- else if (a === 'back1'){ step = 1; }
- else if (a === 'both'){ save(); step = 4; }
- else if (a === 'one'){ msg = 'Если обоими глазами видна только одна фигура, сообщите об этом врачу.'; save(); step = 4; }
- else if (a === 'again'){ step = 0; }
- view();
-}
-
-el('content').addEventListener('click', function(e){
- var b = e.target.closest('button');
- if (b && b.getAttribute('data-act')) act(b.getAttribute('data-act'));
+/* ---------- настройки ---------- */
+const P = { gap_ms: 500, stimulus_max_ms: 3000, dwell_window_ms: 300, roi_center_radius_px: 80 };
+try { Object.assign(P, JSON.parse(localStorage.getItem('protoParams')) || {}); } catch (e) {}
+document.querySelectorAll('[data-k]').forEach(inp => {
+  inp.value = P[inp.dataset.k];
+  inp.addEventListener('change', () => {
+    P[inp.dataset.k] = +inp.value;
+    localStorage.setItem('protoParams', JSON.stringify(P));
+  });
 });
-['r', 'g', 'b'].forEach(function(k){
- el(k).addEventListener('input', function(){ s[k] = +this.value; paint(); save(); });
-});
-el('reset').addEventListener('click', function(){ s.r = 255; s.g = 255; s.b = 0; save(); paint(); });
 
-view();
-</script>
-</body>
-</html>
+/* ---------- очки ---------- */
+const swap = $('#swap');
+const YELLOW = 'rgb(' + GL.r + ',' + GL.g + ',' + GL.b + ')';   // видно обоими глазами
+function redEye() { return swap.checked ? (GL.redEye === 'left' ? 'right' : 'left') : GL.redEye; }
+function showGlasses() {
+  const l = redEye() === 'left';
+  $('#ginfo').innerHTML =
+    '<span style="color:' + RED + '">■</span> красный — ' + (l ? 'левый' : 'правый') + ' глаз<br>' +
+    '<span style="color:' + GREEN + '">■</span> зелёный — ' + (l ? 'правый' : 'левый') + ' глаз';
+}
+swap.addEventListener('change', () => { showGlasses(); render(); });
+showGlasses();
+
+/* ---------- лог ---------- */
+const LOG = [];
+function log(e) {
+  e.scene = cur; e.time = new Date().toISOString();
+  LOG.push(e);
+  $('#last').textContent = JSON.stringify(e, null, 1);
+}
+$('#dl').onclick = () => {
+  const data = { glasses: Object.assign({}, GL, { redEyeActual: redEye() }), params: P, log: LOG };
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }));
+  a.download = 'log_' + new Date().toISOString().slice(0, 19).replace(/:/g, '-') + '.json';
+  a.click();
+};
+
+/* ---------- «взгляд» = курсор ---------- */
+let gaze = null;
+stage.addEventListener('mousemove', e => {
+  const r = stage.getBoundingClientRect();
+  gaze = { x: e.clientX - r.left, y: e.clientY - r.top };
+});
+stage.addEventListener('mouseleave', () => gaze = null);
+
+/* ---------- движок сцен ---------- */
+let cur = 0, run = 0;
+const alive = my => my === run;
+
+function newCanvas() {
+  const c = document.createElement('canvas');
+  c.className = 'rds';
+  c.style.cssText = 'display:block;width:100%;height:100%';
+  c.width = stage.clientWidth; c.height = stage.clientHeight;
+  stage.appendChild(c);
+  return c;
+}
+function rndPos(c, m) {
+  return { x: m + Math.random() * (c.width - 2 * m), y: m + Math.random() * (c.height - 2 * m) };
+}
+
+// проба: пауза gap → стимул → ждём фиксацию в ROI (dwell) или таймаут
+function trial(my, name, draw) {
+  setTimeout(() => {
+    if (!alive(my)) return;
+    const tg = draw(newCanvas());
+    const t0 = performance.now();
+    let inSince = null;
+    (function tick() {
+      if (!alive(my)) return;
+      const now = performance.now();
+      const inside = gaze && Math.hypot(gaze.x - tg.x, gaze.y - tg.y) <= P.roi_center_radius_px;
+      if (inside) {
+        if (inSince === null) inSince = now;
+        if (now - inSince >= P.dwell_window_ms) return finish(true, Math.round(inSince - t0));
+      } else inSince = null;
+      if (now - t0 >= P.stimulus_max_ms) return finish(false, null);
+      requestAnimationFrame(tick);
+    })();
+    function finish(hit, latency) {
+      log({ name, hit, latency_ms: latency, target: { x: Math.round(tg.x), y: Math.round(tg.y) }, redEye: redEye() });
+      stage.innerHTML = '';
+      setTimeout(() => {
+        if (!alive(my)) return;
+        if (cur < SCENES.length - 1) go(cur + 1);
+        else stage.innerHTML = '<p style="color:#fff;font-size:28px;text-align:center;margin-top:20%">Готово. Скачайте JSON-лог.</p>';
+      }, P.gap_ms);
+    }
+  }, P.gap_ms);
+}
+
+// цветная точка: жёлтая — видят оба глаза, красная/зелёная — только один
+function dotScene(name, color) {
+  return my => trial(my, name, c => {
+    const g = c.getContext('2d');
+    g.fillStyle = '#000'; g.fillRect(0, 0, c.width, c.height);
+    const p = rndPos(c, 120);
+    g.fillStyle = color; g.beginPath(); g.arc(p.x, p.y, 30, 0, 2 * Math.PI); g.fill();
+    return p;
+  });
+}
+ 
+// случайно-точечная стереограмма: квадрат виден только при стереозрении
+function drawRDS(c, sx, sy, size, d) {
+  const g = c.getContext('2d'), W = c.width, H = c.height, D = 3;
+  g.fillStyle = '#000'; g.fillRect(0, 0, W, H);
+  const bg = [], fg = [];
+  for (let i = 0; i < W * H / (D * D) / 4; i++) bg.push([Math.random() * W,
