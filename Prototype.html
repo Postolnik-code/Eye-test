@@ -69,7 +69,177 @@ document.documentElement.style.setProperty('--green', GREEN);
 </aside>
 
 <script>
+(function () {
 const $ = s => document.querySelector(s);
 const stage = $('#stage');
+const CR = (typeof RED !== 'undefined') ? RED : '#ff0000';
+const CG = (typeof GREEN !== 'undefined') ? GREEN : '#00ff00';
+const G0 = (typeof GL !== 'undefined' && GL) ? GL : {};
+const CY = '#ffff00';
 
-/* ---------- настройки ---------
+/* ---------- настройки ---------- */
+const P = { gap_ms: 500, stimulus_max_ms: 3000, dwell_window_ms: 300, roi_center_radius_px: 80 };
+try { Object.assign(P, JSON.parse(localStorage.getItem('protoParams')) || {}); } catch (e) {}
+Object.keys(P).forEach(k => {
+  const inp = document.getElementById(k) ||
+    document.querySelector('[name="' + k + '"],[data-k="' + k + '"]') ||
+    [...document.querySelectorAll('#panel input:not([type=checkbox])')]
+      .find(i => (i.parentElement.textContent || '').includes(k));
+  if (!inp) return;
+  inp.value = P[k];
+  inp.addEventListener('change', () => {
+    P[k] = +inp.value || P[k];
+    localStorage.setItem('protoParams', JSON.stringify(P));
+  });
+});
+
+function status(t) { const s = $('#status'); if (s) s.textContent = t; }
+function on(txt, fn) {
+  const b = [...document.querySelectorAll('button')].find(b => b.textContent.includes(txt));
+  if (b) b.onclick = fn;
+}
+
+/* ---------- очки ---------- */
+const swap = $('#swap');
+function redEye() {
+  const e = G0.redEye === 'right' ? 'right' : 'left';
+  return (swap && swap.checked) ? (e === 'left' ? 'right' : 'left') : e;
+}
+function showGlasses() {
+  const g = $('#ginfo'); if (!g) return;
+  const l = redEye() === 'left';
+  g.innerHTML =
+    '<span style="color:' + CR + '">■</span> красный — ' + (l ? 'левый' : 'правый') + ' глаз<br>' +
+    '<span style="color:' + CG + '">■</span> зелёный — ' + (l ? 'правый' : 'левый') + ' глаз';
+}
+if (swap) swap.addEventListener('change', () => { showGlasses(); go(cur); });
+
+/* ---------- лог ---------- */
+const LOG = [];
+function log(e) {
+  e.scene = cur + 1; e.name = SCENES[cur].name; e.time = new Date().toISOString();
+  LOG.push(e);
+}
+function download() {
+  const data = { glasses: Object.assign({}, G0, { redEyeActual: redEye() }), params: P, log: LOG };
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }));
+  a.download = 'log_' + new Date().toISOString().slice(0, 19).replace(/:/g, '-') + '.json';
+  a.click();
+}
+
+/* ---------- «взгляд» = курсор ---------- */
+let gaze = null;
+stage.addEventListener('mousemove', e => {
+  const r = stage.getBoundingClientRect();
+  gaze = { x: e.clientX - r.left, y: e.clientY - r.top };
+});
+stage.addEventListener('mouseleave', () => gaze = null);
+
+/* ---------- рисование ---------- */
+function rnd(c, m) {
+  return { x: m + Math.random() * (c.width - 2 * m), y: m + Math.random() * (c.height - 2 * m) };
+}
+function dot(color) {
+  return c => {
+    const g = c.getContext('2d');
+    g.fillStyle = '#000'; g.fillRect(0, 0, c.width, c.height);
+    const p = rnd(c, 120);
+    g.fillStyle = color; g.beginPath(); g.arc(p.x, p.y, 30, 0, 7); g.fill();
+    return p;
+  };
+}
+function rds(d) {   // стереоквадрат: виден только при бинокулярном зрении
+  return c => {
+    const g = c.getContext('2d'), W = c.width, H = c.height, S = Math.min(W, H) / 3;
+    g.fillStyle = '#000'; g.fillRect(0, 0, W, H);
+    const p = rnd(c, S / 2 + 20);
+    g.globalCompositeOperation = 'lighter';
+    const n = Math.floor(W * H / 60);
+    for (let i = 0; i < n; i++) {
+      const x = Math.random() * W, y = Math.random() * H;
+      const inside = Math.abs(x - p.x) < S / 2 && Math.abs(y - p.y) < S / 2;
+      g.fillStyle = CR; g.fillRect(x, y, 3, 3);
+      g.fillStyle = CG; g.fillRect(x + (inside ? d : 0), y, 3, 3);
+    }
+    g.globalCompositeOperation = 'source-over';
+    return p;
+  };
+}
+
+/* ---------- сцены 1–16 ---------- */
+const SCENES = [
+  ...[1, 2, 3, 4].map(i => ({ name: 'Жёлтая точка (оба глаза) ' + i, draw: dot(CY) })),
+  ...[1, 2, 3, 4].map(i => ({ name: 'Красная точка (один глаз) ' + i, draw: dot(CR) })),
+  ...[1, 2, 3, 4].map(i => ({ name: 'Зелёная точка (другой глаз) ' + i, draw: dot(CG) })),
+  ...[12, 8, 5, 3].map(d => ({ name: 'Стереоквадрат, сдвиг ' + d + ' px', draw: rds(d) }))
+];
+
+/* ---------- движок ---------- */
+let cur = 0, run = 0;
+function newCanvas() {
+  stage.innerHTML = '';
+  const c = document.createElement('canvas');
+  c.width = stage.clientWidth || 800; c.height = stage.clientHeight || 600;
+  c.style.cssText = 'display:block;width:100%;height:100%;background:#000';
+  stage.appendChild(c);
+  return c;
+}
+function go(i) {
+  cur = Math.max(0, Math.min(SCENES.length - 1, i));
+  const my = ++run;
+  stage.innerHTML = '';
+  status('Сцена ' + (cur + 1) + ' из ' + SCENES.length + ': ' + SCENES[cur].name);
+  setTimeout(() => {
+    if (my !== run) return;
+    const tg = SCENES[cur].draw(newCanvas());
+    watch(my, tg);
+  }, P.gap_ms);
+}
+function watch(my, tg) {
+  const t0 = performance.now(); let inSince = null;
+  (function tick() {
+    if (my !== run) return;
+    const now = performance.now();
+    const inside = gaze && Math.hypot(gaze.x - tg.x, gaze.y - tg.y) <= P.roi_center_radius_px;
+    if (inside) {
+      if (inSince === null) inSince = now;
+      if (now - inSince >= P.dwell_window_ms) return done(tg, true, Math.round(inSince - t0));
+    } else inSince = null;
+    if (now - t0 >= P.stimulus_max_ms) return done(tg, false, null);
+    requestAnimationFrame(tick);
+  })();
+}
+function done(tg, hit, lat) {
+  log({ hit: hit, latency_ms: lat, target: { x: Math.round(tg.x), y: Math.round(tg.y) }, redEye: redEye() });
+  if (cur < SCENES.length - 1) go(cur + 1);
+  else {
+    run++;
+    status('Готово: все ' + SCENES.length + ' сцен');
+    stage.innerHTML = '<p style="color:#fff;font-size:28px;text-align:center;margin-top:20%">Готово. Скачайте JSON-лог.</p>';
+  }
+}
+
+/* ---------- кнопки и клавиши ---------- */
+on('Назад', () => go(cur - 1));
+on('Повтор', () => go(cur));
+on('Далее', () => go(cur + 1));
+on('JSON', download);
+on('весь экран', () => {
+  const f = stage.requestFullscreen || stage.webkitRequestFullscreen;
+  if (f) f.call(stage);
+});
+document.addEventListener('fullscreenchange', () => go(cur));
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT') return;
+  if (e.key === 'ArrowLeft') go(cur - 1);
+  if (e.key === 'ArrowRight') go(cur + 1);
+  if (e.key === 'r' || e.key === 'R' || e.key === 'к' || e.key === 'К') go(cur);
+});
+
+showGlasses();
+go(0);
+})();
+</script>
+</body>
+</html>
